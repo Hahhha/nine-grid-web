@@ -8,14 +8,19 @@ type Props = {
 };
 
 function formatPiece(piece: PuzzlePiece) {
-  return [
+  const parts = [
     SHAPE_LABELS[piece.shape],
     RARITY_LABELS[piece.rarity],
     `白:${piece.subStat ? SUBSTAT_LABELS[piece.subStat] : "空"}`,
     `绿:${piece.greenSkill ?? "空"}`,
     `蓝:${piece.blueStat ? BLUE_STAT_LABELS[piece.blueStat] : "空"}`,
-    `紫:${piece.purpleSkill ?? "空"}`,
-  ].join(" · ");
+  ];
+
+  if (piece.rarity === "purple") {
+    parts.push(`紫:${piece.purpleSkill ?? "空"}`);
+  }
+
+  return parts.join(" · ");
 }
 
 export function CandidateList({ pieces, onRemove, onClear }: Props) {

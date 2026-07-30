@@ -10,6 +10,7 @@ type Props = {
 
 export function CandidateEditor({ piece, onChange, onAdd }: Props) {
   const skills = ELEMENT_SKILLS[piece.element];
+  const isPurple = piece.rarity === "purple";
 
   return (
     <div className="section-stack">
@@ -24,7 +25,18 @@ export function CandidateEditor({ piece, onChange, onAdd }: Props) {
         </select>
 
         <label className="field-label">等级</label>
-        <select className="select" value={piece.rarity} onChange={(e) => onChange({ ...piece, rarity: e.target.value as PuzzlePiece["rarity"] })}>
+        <select
+          className="select"
+          value={piece.rarity}
+          onChange={(e) => {
+            const nextRarity = e.target.value as PuzzlePiece["rarity"];
+            onChange({
+              ...piece,
+              rarity: nextRarity,
+              purpleSkill: nextRarity === "purple" ? piece.purpleSkill ?? skills[0] : undefined,
+            });
+          }}
+        >
           {Object.entries(RARITY_LABELS).filter(([value]) => value === "blue" || value === "purple").map(([value, label]) => (
             <option key={value} value={value}>
               {label}
@@ -41,7 +53,7 @@ export function CandidateEditor({ piece, onChange, onAdd }: Props) {
               ...piece,
               element: e.target.value as PuzzlePiece["element"],
               greenSkill: ELEMENT_SKILLS[e.target.value as PuzzlePiece["element"]][0],
-              purpleSkill: ELEMENT_SKILLS[e.target.value as PuzzlePiece["element"]][0],
+              purpleSkill: piece.rarity === "purple" ? ELEMENT_SKILLS[e.target.value as PuzzlePiece["element"]][0] : undefined,
             })
           }
         >
@@ -79,14 +91,18 @@ export function CandidateEditor({ piece, onChange, onAdd }: Props) {
           ))}
         </select>
 
-        <label className="field-label">紫色词条</label>
-        <select className="select" value={piece.purpleSkill} onChange={(e) => onChange({ ...piece, purpleSkill: e.target.value as PuzzlePiece["purpleSkill"] })}>
-          {skills.map((skill) => (
-            <option key={skill} value={skill}>
-              {skill}
-            </option>
-          ))}
-        </select>
+        {isPurple ? (
+          <>
+            <label className="field-label">紫色词条</label>
+            <select className="select" value={piece.purpleSkill ?? skills[0]} onChange={(e) => onChange({ ...piece, purpleSkill: e.target.value as PuzzlePiece["purpleSkill"] })}>
+              {skills.map((skill) => (
+                <option key={skill} value={skill}>
+                  {skill}
+                </option>
+              ))}
+            </select>
+          </>
+        ) : null}
       </div>
 
       <div className="button-row">
