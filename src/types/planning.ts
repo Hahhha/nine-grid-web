@@ -27,6 +27,8 @@ export type PlanningResult = {
     enumerated9: number;
     enumerated8: number;
     enumerated7: number;
+    enumerated6: number;
+    enumerated5: number;
   };
 };
 

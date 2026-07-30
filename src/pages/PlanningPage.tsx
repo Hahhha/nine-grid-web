@@ -102,6 +102,8 @@ export function PlanningPage() {
           enumerated9: 0,
           enumerated8: 0,
           enumerated7: 0,
+          enumerated6: 0,
+          enumerated5: 0,
         },
       };
       setResults([overCap]);
@@ -117,7 +119,7 @@ export function PlanningPage() {
 
   return (
     <div className="section-stack">
-      <div className="page-intro">这一页会优先使用你的候选集，再按目标属性和合法形状配比推荐 9 / 8 / 7 候选路线。</div>
+      <div className="page-intro">这一页会优先使用你的候选集，再按目标属性和合法形状配比推荐 9 / 8 / 7 / 6 / 5 候选路线。默认已包含 1 个永久 O 田字格；它不计入候选数量，所以候选最多仍是 9 块。</div>
 
       <div className="page-grid wide-right">
         <PageCard title="目标总体属性" note="先编辑，再单独保存为当前规划目标">
@@ -148,7 +150,7 @@ export function PlanningPage() {
         <PageCard title="加入候选拼图" note="下一步再补批量导入和预排除统计">
           <div className="section-stack">
             <CandidateEditor piece={draftPiece} onChange={setDraftPiece} onAdd={addCandidate} />
-            <span className="helper-text">当前规划只接受蓝色 / 紫色候选，并会自动过滤掉与目标元素不一致或对目标无贡献的拼图。</span>
+              <span className="helper-text">当前规划只接受蓝色 / 紫色候选，并会自动过滤掉与目标元素不一致或对目标无贡献的拼图。永久 O 已默认计入合法配比，不占这里的候选名额。</span>
           </div>
         </PageCard>
       </div>
@@ -176,14 +178,14 @@ export function PlanningPage() {
           </div>
         </PageCard>
 
-        <PageCard title="推荐合成解法" note="当前已接入候选预过滤和 9 / 8 / 7 全量组合">
+        <PageCard title="推荐合成解法" note="当前已接入候选预过滤和 9 / 8 / 7 / 6 / 5 全量组合">
           <div className="section-stack">
             <div className="helper-row">
               <button type="button" className="button primary" onClick={planRoutes} disabled={candidates.length === 0}>
                 规划路线
               </button>
               <span className="helper-text">
-                {candidates.length === 0 ? "先加入至少 1 个候选拼图。" : "会优先收集 9 候选方案，不足 5 个再补 8 候选和 7 候选方案。"}
+                {candidates.length === 0 ? "先加入至少 1 个候选拼图。" : "会优先收集 9 候选方案，不足 5 个再补 8 / 7 / 6 / 5 候选方案；永久 O 已默认算入棋盘，不占候选位。"}
               </span>
             </div>
             <PlanningResultPanel results={results} activeId={activeResultId} onSelect={setActiveResultId} />

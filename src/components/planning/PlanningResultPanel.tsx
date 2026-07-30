@@ -55,6 +55,10 @@ export function PlanningResultPanel({ results, activeId, onSelect }: Props) {
           <p>{activeResult.summary}</p>
         </div>
 
+        <div className="stats-strip">
+          <span>说明：当前规划结果默认已按“额外 1 个永久 O 田字格”预计算合法配比；这个永久 O 不计入候选数量。</span>
+        </div>
+
         {activeResult.diagnostics ? (
           <div className="stats-strip">
             <span>{activeResult.diagnostics}</span>
@@ -81,6 +85,14 @@ export function PlanningResultPanel({ results, activeId, onSelect }: Props) {
           <div className="stats-card">
             <strong>7 候选穷举</strong>
             <span>{activeResult.stats.enumerated7}</span>
+          </div>
+          <div className="stats-card">
+            <strong>6 候选穷举</strong>
+            <span>{activeResult.stats.enumerated6}</span>
+          </div>
+          <div className="stats-card">
+            <strong>5 候选穷举</strong>
+            <span>{activeResult.stats.enumerated5}</span>
           </div>
         </div>
 

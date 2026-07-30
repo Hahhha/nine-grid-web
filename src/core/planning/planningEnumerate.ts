@@ -1,15 +1,19 @@
 import { PLANNING_GROUP_SIZES, PLANNING_SLOT_COUNT } from "./planningRules";
 import type { PuzzlePiece } from "../../types/domain";
 
+export type PlanningGroupSize = (typeof PLANNING_GROUP_SIZES)[number];
+
 export type CandidateCombo = {
   selected: PuzzlePiece[];
-  selectedCount: 7 | 8 | 9;
+  selectedCount: PlanningGroupSize;
 };
 
 export type EnumerateStats = {
   enumerated9: number;
   enumerated8: number;
   enumerated7: number;
+  enumerated6: number;
+  enumerated5: number;
   total: number;
 };
 
@@ -19,10 +23,12 @@ export function enumeratePlanningCombos(pool: PuzzlePiece[]): { combos: Candidat
     enumerated9: 0,
     enumerated8: 0,
     enumerated7: 0,
+    enumerated6: 0,
+    enumerated5: 0,
     total: 0,
   };
 
-  const enumerateSize = (desired: 7 | 8 | 9) => {
+  const enumerateSize = (desired: PlanningGroupSize) => {
     if (desired > PLANNING_SLOT_COUNT || desired > pool.length) return;
     const indexes: number[] = [];
     const dfs = (start: number) => {
