@@ -1,10 +1,11 @@
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { STORAGE_KEYS } from "../app/storageKeys";
 import { PageCard } from "../components/common/PageCard";
 import { CandidateEditor } from "../components/planning/CandidateEditor";
 import { CandidateList } from "../components/planning/CandidateList";
 import { GoalEditor } from "../components/planning/GoalEditor";
 import { PlanningResultPanel } from "../components/planning/PlanningResultPanel";
+import { downloadPlanningTemplate, exportPlanningWorkbook, importCandidatesFromText, importPlanningWorkbook } from "../core/planning/planningExcel";
 import { APP_SAVED_ROUTE_CANDIDATES, APP_SAVED_ROUTE_GOAL } from "../data/appSavedPlanningSeed";
 import { enumeratePlanningCombos } from "../core/planning/planningEnumerate";
 import { filterPlanningCandidates } from "../core/planning/planningFilter";
@@ -46,6 +47,8 @@ export function PlanningPage() {
   const [draftPiece, setDraftPiece] = useLocalState<PuzzlePiece>(STORAGE_KEYS.routeDraftPiece, DEFAULT_PIECE);
   const [results, setResults] = useLocalState<PlanningResult[]>(STORAGE_KEYS.routeResults, []);
   const [activeResultId, setActiveResultId] = useLocalState<string>(STORAGE_KEYS.routeActiveResultId, "");
+  const [excelMessage, setExcelMessage] = useState<string>("");
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const goalSummary = useMemo(() => {
     const skillTargets = Object.entries(savedGoal.counts.elementSkills)
@@ -64,6 +67,19 @@ export function PlanningPage() {
       id: `${Date.now()}-${Math.random().toString(16).slice(2, 8)}`,
     };
     setCandidates([...candidates, newPiece]);
+    setExcelMessage("");
+  };
+
+  const addCandidatesBatch = (raw: string) => {
+    try {
+      const imported = importCandidatesFromText(raw);
+      setCandidates([...candidates, ...imported.candidates]);
+      setExcelMessage(imported.summary);
+      return `${imported.summary}，已加入候选集合。`;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "批量添加失败，请检查格式。";
+      return `批量添加失败：${message}`;
+    }
   };
 
   const filteredPreview = useMemo(() => filterPlanningCandidates(candidates, savedGoal), [candidates, savedGoal]);
@@ -82,6 +98,36 @@ export function PlanningPage() {
     setCandidates(APP_SAVED_ROUTE_CANDIDATES);
     setResults([]);
     setActiveResultId("");
+    setExcelMessage("已导入 App 内置的规划路线示例数据。");
+  };
+
+  const resetPlanningResults = () => {
+    setResults([]);
+    setActiveResultId("");
+  };
+
+  const handleExportExcel = () => {
+    exportPlanningWorkbook(savedGoal, candidates);
+    setExcelMessage(`已导出当前规划数据：1 套目标属性，${candidates.length} 个候选拼图。`);
+  };
+
+  const handleImportFile = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    try {
+      const imported = await importPlanningWorkbook(file);
+      setSavedGoal(imported.goal);
+      setDraftGoal(imported.goal);
+      setCandidates(imported.candidates);
+      resetPlanningResults();
+      setExcelMessage(imported.summary);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "导入失败，请检查模板格式。";
+      setExcelMessage(message);
+    } finally {
+      event.target.value = "";
+    }
   };
 
   const planRoutes = () => {
@@ -129,11 +175,22 @@ export function PlanningPage() {
               <button type="button" className="button primary" onClick={() => setSavedGoal(draftGoal)}>
                 保存目标
               </button>
+              <button type="button" className="button secondary" onClick={downloadPlanningTemplate}>
+                下载空白模板
+              </button>
+              <button type="button" className="button secondary" onClick={handleExportExcel}>
+                导出 Excel
+              </button>
+              <button type="button" className="button secondary" onClick={() => fileInputRef.current?.click()}>
+                导入 Excel
+              </button>
               <button type="button" className="button secondary" onClick={importAppSavedRouteData}>
                 导入 App 已保存数据
               </button>
               <span className="helper-text">只有保存后的目标才会参与规划。</span>
             </div>
+            <input ref={fileInputRef} type="file" accept=".xlsx" style={{ display: "none" }} onChange={handleImportFile} />
+            {excelMessage ? <div className="stats-strip"><span>{excelMessage}</span></div> : null}
             <div className="summary-box">
               <p className="mini-note">已保存目标摘要</p>
               <div className="pill-row" style={{ marginTop: 10 }}>
@@ -149,7 +206,7 @@ export function PlanningPage() {
 
         <PageCard title="加入候选拼图" note="下一步再补批量导入和预排除统计">
           <div className="section-stack">
-            <CandidateEditor piece={draftPiece} onChange={setDraftPiece} onAdd={addCandidate} />
+            <CandidateEditor piece={draftPiece} onChange={setDraftPiece} onAdd={addCandidate} onBatchAdd={addCandidatesBatch} />
               <span className="helper-text">当前规划只接受蓝色 / 紫色候选，并会自动过滤掉与目标元素不一致或对目标无贡献的拼图。永久 O 已默认计入合法配比，不占这里的候选名额。</span>
           </div>
         </PageCard>

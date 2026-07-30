@@ -1,23 +1,27 @@
 import { useMemo } from "react";
 import { STORAGE_KEYS } from "./app/storageKeys";
 import { useLocalState } from "./hooks/useLocalState";
+import { GuidePage } from "./pages/GuidePage";
 import { PlanningPage } from "./pages/PlanningPage";
 import { PlacementPage } from "./pages/PlacementPage";
 import { SynthesisPage } from "./pages/SynthesisPage";
 
-type TabKey = "synthesis" | "planning" | "placement";
+type TabKey = "guide" | "synthesis" | "planning" | "placement";
 
 const TABS: { key: TabKey; label: string }[] = [
+  { key: "guide", label: "使用说明" },
   { key: "synthesis", label: "合成概率" },
   { key: "planning", label: "规划路线" },
   { key: "placement", label: "摆放推荐" },
 ];
 
 export default function App() {
-  const [activeTab, setActiveTab] = useLocalState<TabKey>(STORAGE_KEYS.uiTab, "synthesis");
+  const [activeTab, setActiveTab] = useLocalState<TabKey>(STORAGE_KEYS.uiTab, "guide");
 
   const content = useMemo(() => {
     switch (activeTab) {
+      case "guide":
+        return <GuidePage />;
       case "planning":
         return <PlanningPage />;
       case "placement":

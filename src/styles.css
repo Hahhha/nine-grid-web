@@ -17,7 +17,8 @@ body {
 
 button,
 select,
-input {
+input,
+textarea {
   font: inherit;
 }
 
@@ -156,7 +157,8 @@ p {
 }
 
 .input,
-.select {
+.select,
+.textarea {
   width: 100%;
   padding: 10px 12px;
   border-radius: 12px;
@@ -166,10 +168,17 @@ p {
 }
 
 .input:focus,
-.select:focus {
+.select:focus,
+.textarea:focus {
   outline: none;
   border-color: #fdba74;
   box-shadow: 0 0 0 4px rgba(251, 146, 60, 0.14);
+}
+
+.textarea {
+  min-height: 132px;
+  resize: vertical;
+  line-height: 1.6;
 }
 
 .section-stack {
