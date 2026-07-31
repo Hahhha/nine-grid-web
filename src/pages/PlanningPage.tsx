@@ -37,7 +37,6 @@ const DEFAULT_PIECE: PuzzlePiece = {
   subStat: "crit",
   greenSkill: "天火陨星",
   blueStat: "sameElementBoost",
-  purpleSkill: "烈火燎原",
 };
 
 export function PlanningPage() {
@@ -64,6 +63,7 @@ export function PlanningPage() {
   const addCandidate = () => {
     const newPiece = {
       ...draftPiece,
+      purpleSkill: draftPiece.rarity === "purple" ? draftPiece.purpleSkill : undefined,
       id: `${Date.now()}-${Math.random().toString(16).slice(2, 8)}`,
     };
     setCandidates([...candidates, newPiece]);

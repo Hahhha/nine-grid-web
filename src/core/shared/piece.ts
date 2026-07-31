@@ -19,7 +19,7 @@ export function pieceSummary(piece: PuzzlePiece, elementLabel?: string): string 
   if (piece.greenSkill) parts.push(`绿:${piece.greenSkill}`);
   const blueName = formatBlueStatName(piece.blueStat, elementLabel);
   if (blueName) parts.push(`蓝:${blueName}`);
-  if (piece.purpleSkill) parts.push(`紫:${piece.purpleSkill}`);
+  if (piece.rarity === "purple" && piece.purpleSkill) parts.push(`紫:${piece.purpleSkill}`);
   return parts.join(" · ");
 }
 

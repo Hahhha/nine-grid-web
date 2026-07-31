@@ -81,7 +81,7 @@ function selectedQualityScore(pieces: PuzzlePiece[]): number {
     if (piece.rarity === "purple") score += 4;
     else if (piece.rarity === "blue") score += 2;
     if (piece.blueStat === "sameElementBoost") score += 2;
-    if (piece.purpleSkill) score += 2;
+    if (piece.rarity === "purple" && piece.purpleSkill) score += 2;
     return sum + score;
   }, 0);
 }
@@ -133,6 +133,21 @@ function shapeNeedSummaryFromPieces(pieces: PuzzlePiece[]): string[] {
   return shapeNeedSummary(pieces.map((piece) => piece.shape));
 }
 
+function statsForPlan(filterStats: {
+  rawCount: number;
+  filteredCount: number;
+}, enumerateStats: EnumerateStats) {
+  return {
+    rawCandidates: filterStats.rawCount,
+    filteredCandidates: filterStats.filteredCount,
+    enumerated9: enumerateStats.enumerated9,
+    enumerated8: enumerateStats.enumerated8,
+    enumerated7: enumerateStats.enumerated7,
+    enumerated6: enumerateStats.enumerated6,
+    enumerated5: enumerateStats.enumerated5,
+  };
+}
+
 function dedupePlans(plans: InternalPlan[]): InternalPlan[] {
   const seen = new Set<string>();
   return plans.filter((plan) => {
@@ -174,20 +189,22 @@ export function runPlanning(
     const selected = combo.selected;
     const selectedCount = combo.selectedCount;
     const room = PLANNING_SLOT_COUNT - selectedCount;
-    const deficits = deficitsForPieces(selected, goal);
-    const newPieces = recommendedPiecesForDeficits(deficits, room, goal);
-    const remaining = remainingDeficitTotal(deficits);
-    const deficitLines = detailedDeficitLines(deficits);
+    const deficitsBeforeSuggestion = deficitsForPieces(selected, goal);
+    const newPieces = recommendedPiecesForDeficits(deficitsBeforeSuggestion, room, goal);
+    const deficitsAfterSuggestion = deficitsForPieces([...selected, ...newPieces], goal);
+    const remainingAfterSuggestion = remainingDeficitTotal(deficitsAfterSuggestion);
+    const deficitLines = detailedDeficitLines(deficitsAfterSuggestion);
 
-    if (remaining > 0) {
+    if (remainingAfterSuggestion > 0) {
       attributeRejected += 1;
+      const spareRoom = Math.max(0, room - newPieces.length);
       const plan: InternalPlan = {
         id: `fallback-attr-${checked}`,
         title: `候选 ${selectedCount} 个后仍不够属性`,
-        summary: `属性未满足 · 剩余位置 ${room} 个 · 还差 ${deficitSummary(deficits)} · ${compactUseSummary(selectedCount, newPieces.length, 0)}`,
+        summary: `属性未满足 · 剩余位置 ${room} 个 · 补目标拼图 ${newPieces.length} 块后仍差 ${deficitSummary(deficitsAfterSuggestion)} · ${compactUseSummary(selectedCount, newPieces.length, spareRoom)}`,
         diagnostics: `原始候选 ${filterStats.rawCount} 个 · 预排除后 ${filterStats.filteredCount} 个 · 已检查 ${checked} 组`,
         usingPieces: selected.slice(0, 6).map((piece) => pieceSummary(piece, ELEMENT_LABELS[goal.element])),
-        missingShapes: room > 0 ? shapeNeedSummaryFromPieces(newPieces) : ["当前已无空位，只能替换现有拼图"],
+        missingShapes: room > 0 ? [...shapeNeedSummaryFromPieces(newPieces), ...(spareRoom > 0 ? [`任意补位 ×${spareRoom}`] : [])] : ["当前已无空位，只能替换现有拼图"],
         missingAttributes: deficitLines.length > 0 ? deficitLines : ["无"],
         suggestedPieces:
           newPieces.length > 0
@@ -196,20 +213,12 @@ export function runPlanning(
         replacementAdvice:
           room > 0
             ? ["先补当前缺口最大的词条，再按剩余形状缺口选择 O / T / L 这类更灵活的拼图"]
-            : replacementPieceSummaryForDeficits(deficits, Math.min(3, Math.max(1, remaining)), goal),
-        stats: {
-          rawCandidates: filterStats.rawCount,
-          filteredCandidates: filterStats.filteredCount,
-          enumerated9: enumerateStats.enumerated9,
-          enumerated8: enumerateStats.enumerated8,
-          enumerated7: enumerateStats.enumerated7,
-          enumerated6: enumerateStats.enumerated6,
-          enumerated5: enumerateStats.enumerated5,
-        },
+            : replacementPieceSummaryForDeficits(deficitsAfterSuggestion, Math.min(3, Math.max(1, remainingAfterSuggestion)), goal),
+        stats: statsForPlan(filterStats, enumerateStats),
         selectedCount,
-        missingCount: newPieces.length + remaining,
+        missingCount: newPieces.length + remainingAfterSuggestion,
         isFallback: true,
-        fillerCount: 0,
+        fillerCount: spareRoom,
         selectedQuality: selectedQualityScore(selected),
         targetSpread: 0,
       };
@@ -230,15 +239,7 @@ export function runPlanning(
         missingAttributes: ["无"],
         suggestedPieces: ["优先补 O / T / L 这类更灵活的目标拼图，尽量别继续堆单一形状"],
         replacementAdvice: ["优先替换形状重复且贡献边缘的候选拼图"],
-        stats: {
-          rawCandidates: filterStats.rawCount,
-          filteredCandidates: filterStats.filteredCount,
-          enumerated9: enumerateStats.enumerated9,
-          enumerated8: enumerateStats.enumerated8,
-          enumerated7: enumerateStats.enumerated7,
-          enumerated6: enumerateStats.enumerated6,
-          enumerated5: enumerateStats.enumerated5,
-        },
+        stats: statsForPlan(filterStats, enumerateStats),
         selectedCount,
         missingCount: room,
         isFallback: true,
@@ -256,9 +257,10 @@ export function runPlanning(
       const fillerCount = Math.max(0, missingShapes.length - shapedSuggestions.length);
       const remainingDeficitsAfterSuggestion = deficitsForPieces([...selected, ...shapedSuggestions], goal);
       const targetSpread = SHAPE_ORDER.filter((shape) => target[shape] > 0).length;
+      const totalMissingPieces = shapedSuggestions.length + fillerCount;
       const plan: InternalPlan = {
         id: `success-${checked}-${targetIndex}`,
-        title: `候选 ${selectedCount} 个 + 还缺 ${shapedSuggestions.length} 个`,
+        title: `候选 ${selectedCount} 个 + 还缺 ${totalMissingPieces} 个`,
         summary: `合法配比成立 · 属性满足 · 未采用候选 ${Math.max(0, candidates.length - selectedCount)} 个 · ${compactUseSummary(selectedCount, shapedSuggestions.length, fillerCount)}`,
         diagnostics: `原始候选 ${filterStats.rawCount} 个 · 预排除后 ${filterStats.filteredCount} 个 · 已检查 ${checked} 组`,
         usingPieces: selected.slice(0, 8).map((piece) => pieceSummary(piece, ELEMENT_LABELS[goal.element])),
@@ -269,17 +271,9 @@ export function runPlanning(
           fillerCount > 0
             ? [`还需要 ${fillerCount} 个任意蓝色补位拼图`, "补位拼图优先选择不干扰目标属性的蓝色任意抵抗"]
             : ["优先使用现有候选即可"],
-        stats: {
-          rawCandidates: filterStats.rawCount,
-          filteredCandidates: filterStats.filteredCount,
-          enumerated9: enumerateStats.enumerated9,
-          enumerated8: enumerateStats.enumerated8,
-          enumerated7: enumerateStats.enumerated7,
-          enumerated6: enumerateStats.enumerated6,
-          enumerated5: enumerateStats.enumerated5,
-        },
+        stats: statsForPlan(filterStats, enumerateStats),
         selectedCount,
-        missingCount: shapedSuggestions.length,
+        missingCount: totalMissingPieces,
         isFallback: false,
         fillerCount,
         selectedQuality: selectedQualityScore(selected),
@@ -314,21 +308,13 @@ export function runPlanning(
         id: "planning-empty",
         title: "当前无法组成完整站位",
         summary: `已检查 ${checked} 组候选；属性不足 ${attributeRejected} 组；合法配比未过 ${shapeRejected} 组。`,
-        diagnostics: `原始候选 ${filterStats.rawCount} 个 · 预排除后 ${filterStats.filteredCount} 个 · 全量穷举 ${enumerateStats.total} 组（9/8/7）`,
+        diagnostics: `原始候选 ${filterStats.rawCount} 个 · 预排除后 ${filterStats.filteredCount} 个 · 全量穷举 ${enumerateStats.total} 组（9/8/7/6/5）`,
         usingPieces: ["请减少冲突候选，或进一步收紧目标。"],
         missingShapes: ["待补形状未知"],
         missingAttributes: ["请先至少设置 1 条目标属性并加入有效候选"],
         suggestedPieces: ["后续可补更贴近目标的蓝/紫拼图"],
         replacementAdvice: ["优先删除对当前目标贡献为 0 的候选"],
-        stats: {
-          rawCandidates: filterStats.rawCount,
-          filteredCandidates: filterStats.filteredCount,
-          enumerated9: enumerateStats.enumerated9,
-          enumerated8: enumerateStats.enumerated8,
-          enumerated7: enumerateStats.enumerated7,
-          enumerated6: enumerateStats.enumerated6,
-          enumerated5: enumerateStats.enumerated5,
-        },
+        stats: statsForPlan(filterStats, enumerateStats),
       },
     ];
   }
@@ -336,7 +322,7 @@ export function runPlanning(
   if (results[0]) {
     results[0] = {
       ...results[0],
-      diagnostics: `原始候选 ${filterStats.rawCount} 个 · 预排除后 ${filterStats.filteredCount} 个 · 全量穷举 ${enumerateStats.total} 组（9/8/7） · 已检查 ${checked} 组 · 属性淘汰 ${attributeRejected} 组 · 配比淘汰 ${shapeRejected} 组`,
+      diagnostics: `原始候选 ${filterStats.rawCount} 个 · 预排除后 ${filterStats.filteredCount} 个 · 全量穷举 ${enumerateStats.total} 组（9/8/7/6/5） · 已检查 ${checked} 组 · 属性淘汰 ${attributeRejected} 组 · 配比淘汰 ${shapeRejected} 组`,
     };
   }
 

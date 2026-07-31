@@ -14,7 +14,7 @@ export function effectiveCountsForPieces(pieces: PuzzlePiece[], goal: PlanningGo
   pieces.forEach((piece) => {
     bump(piece.subStat);
     bump(piece.greenSkill);
-    bump(piece.purpleSkill);
+    if (piece.rarity === "purple") bump(piece.purpleSkill);
     if (piece.blueStat === "sameElementBoost") bump(sameElementBoostName);
   });
 

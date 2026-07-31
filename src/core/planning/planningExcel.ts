@@ -223,7 +223,7 @@ function makeGoalSheet(goal: PlanningGoal) {
 }
 
 function candidateKey(piece: PuzzlePiece) {
-  return [piece.shape, piece.rarity, piece.subStat ?? "", piece.greenSkill ?? "", piece.purpleSkill ?? "", piece.blueStat ?? ""].join("|");
+  return [piece.shape, piece.rarity, piece.subStat ?? "", piece.greenSkill ?? "", piece.rarity === "purple" ? piece.purpleSkill ?? "" : "", piece.blueStat ?? ""].join("|");
 }
 
 function groupCandidates(candidates: PuzzlePiece[]) {
